@@ -1,0 +1,67 @@
+#!/bin/bash
+echo "localize path_to_app_dir"
+if [ $1 ]; then
+/data/localization/labs/unlocalize_labs $1
+cp $1/Gruntfile.js $1/Gruntfile_dev.js
+sed -i 's/index.ejs/index_dev.ejs/g' $1/Gruntfile_dev.js
+sed -i 's/app.js/app_dev.js/g' $1/Gruntfile_dev.js
+sed -i "s/\\s\s'open',/  \/\/'open',/g" $1/Gruntfile_dev.js
+
+cp $1/server/app.js $1/server/app_dev.js
+sed -i 's/routes/routes_dev/g' $1/server/app_dev.js
+sed -i 's/config\/express/config\/express_dev/g' $1/server/app_dev.js
+
+cp $1/server/routes.js $1/server/routes_dev.js
+sed -i 's/api\/lab/api\/dev/g' $1/server/routes_dev.js
+sed -i 's/index/index_dev/g' $1/server/routes_dev.js
+
+cp $1/server/config/express.js $1/server/config/express_dev.js
+sed -i "s/'development' === env || 'test' === env/'development' === env || 'test' === env || 'dev' === env/g" $1/server/config/express_dev.js
+
+cp $1/server/views/index.ejs $1/server/views/index_dev.ejs
+sed -i '/LabsCtrl/a \\t\t\t\t\t\<div ng-controller="devCtrl" ng-show="false"\>\</div\>' $1/server/views/index_dev.ejs
+
+touch $1/server/config/environment/dev.js
+cat > $1/server/config/environment/dev.js << EOF
+'use strict';
+
+// Dev specific configuration
+// ==================================
+module.exports = {
+  // MongoDB connection options
+  mongo: {
+    uri: process.env.MONGOLAB_URI
+  }
+};
+
+EOF
+
+mkdir $1/server/api/dev
+cp $1/server/api/lab/* $1/server/api/dev/
+sed -i "s/res\.render('index'/res\.render('index_dev'/g" $1/server/api/dev/lab.controller.js
+sed -i '/function authed(req) {/a \\treturn true;' $1/server/api/dev/lab.controller.js
+
+touch $1/client/app/services/admin_dev.service.js
+cat > $1/client/app/services/admin_dev.service.js << EOF
+/*global window, document, console, angular, location*/
+'use strict';
+
+angular.module('labsApp')
+   .factory('Admin_dev', function () {
+       return window.portal.user_info = {
+           internal: true
+       };
+
+   });
+
+angular.module('labsApp')
+   .controller('devCtrl', function (Admin_dev) {
+
+   });
+EOF
+
+cat >> $1/.gitignore << EOF
+*/dev*/*
+*dev*
+EOF
+fi
